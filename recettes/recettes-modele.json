@@ -1,0 +1,66 @@
+{
+  "$schema": "./recettes.schema.json",
+  "format": "a-table-recettes",
+  "version": 1,
+  "recettes": [
+    {
+      "id": "poulet-cremeux-epinards",
+      "nom": "Poulet crémeux aux épinards",
+      "photo": "photos/poulet-cremeux-epinards.jpg",
+      "source": "https://www.instagram.com/p/XXXXXXXXXXX/",
+      "portions": 4,
+      "preparation_min": 15,
+      "cuisson_min": 25,
+      "categories": ["viande"],
+      "repas": ["midi", "diner"],
+      "saison": ["oct", "nov", "dec", "jan", "fev", "mar"],
+      "favori": true,
+      "ingredients": [
+        { "nom": "Blanc de poulet", "quantite": 600, "unite": "g", "rayon": "Boucherie" },
+        { "nom": "Épinards", "quantite": 300, "unite": "g", "rayon": "Fruits et légumes" },
+        { "nom": "Crème", "quantite": 20, "unite": "cl", "rayon": "Crèmerie" },
+        { "nom": "Oignon", "quantite": 1, "unite": "pc", "rayon": "Fruits et légumes" },
+        { "nom": "Huile d'olive", "quantite": 10, "unite": "g", "rayon": "Épicerie" }
+      ],
+      "etapes": [
+        "Émincer l'oignon.",
+        "Faire revenir le poulet coupé en dés dans l'huile 8 minutes.",
+        "Ajouter l'oignon, puis les épinards et la crème.",
+        "Laisser mijoter 10 minutes à feu doux."
+      ],
+      "nutrition_par_portion": {
+        "kcal": 520,
+        "proteines_g": 42,
+        "glucides_g": 9,
+        "sucres_g": 5,
+        "lipides_g": 34,
+        "fibres_g": 4,
+        "sel_g": 1.1
+      }
+    },
+    {
+      "id": "pomme-amandes",
+      "nom": "Pomme & amandes",
+      "photo": "https://exemple.fr/photos/pomme-amandes.jpg",
+      "portions": 1,
+      "preparation_min": 2,
+      "cuisson_min": 0,
+      "categories": ["gouter", "rapide"],
+      "repas": ["gouter"],
+      "ingredients": [
+        { "nom": "Pommes", "quantite": 1, "unite": "pc", "rayon": "Fruits et légumes" },
+        { "nom": "Amandes", "quantite": 20, "unite": "g", "rayon": "Épicerie" }
+      ],
+      "etapes": [
+        "Couper la pomme en quartiers.",
+        "Servir avec les amandes."
+      ],
+      "nutrition_par_portion": {
+        "kcal": 190,
+        "proteines_g": 5,
+        "sucres_g": 15,
+        "fibres_g": 5
+      }
+    }
+  ]
+}
