@@ -19,6 +19,7 @@
         "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "Identifiant unique, minuscules et tirets" },
         "nom": { "type": "string", "minLength": 1 },
         "photo": { "type": "string", "minLength": 1, "description": "Chemin relatif (photos/xxx.jpg), URL https ou data:image/...;base64" },
+        "emoji": { "type": "string", "maxLength": 8, "description": "Pictogramme affiché dans le semainier (facultatif)" },
         "source": { "type": "string", "description": "Lien de la publication d'origine (Instagram, Facebook...)" },
         "portions": { "type": "integer", "minimum": 1 },
         "preparation_min": { "type": "integer", "minimum": 0 },
