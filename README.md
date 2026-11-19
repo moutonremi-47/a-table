@@ -40,3 +40,17 @@ par jour et par semaine, liste des courses à cocher.
 
 - **Exporter une sauvegarde** : télécharge `a-table-sauvegarde-AAAA-MM-JJ.json` (plannings, courses, recettes importées et photos).
 - **Restaurer une sauvegarde** : choisir ce fichier ; il remplace les données de l'appareil (confirmation demandée).
+
+## Sauvegarde dans GitHub (Gist secret)
+
+1. Sur github.com : photo de profil → **Settings** → **Developer settings** → **Personal access tokens**
+   → **Tokens (classic)** → **Generate new token (classic)**.
+2. Nom : `À table`, expiration au choix, cocher **uniquement `gist`** → **Generate token**, puis copier le jeton
+   (il ne s'affiche qu'une fois).
+3. Dans l'application : **➕ Recette** → **Sauvegarde GitHub** → coller le jeton → **Connecter**.
+   Un Gist **secret** `a-table-sauvegarde.json` est créé ; il est mis à jour automatiquement après chaque modification.
+4. Sur un autre téléphone : coller le même jeton → **Connecter** → **Récupérer depuis GitHub**.
+
+À savoir : un Gist secret n'apparaît pas dans les recherches, mais toute personne qui possède son lien peut le lire.
+Le jeton reste sur l'appareil (jamais dans les sauvegardes) ; s'il est perdu ou exposé, le supprimer dans GitHub
+(**Personal access tokens → Delete**) et en créer un nouveau.

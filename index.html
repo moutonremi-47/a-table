@@ -208,10 +208,15 @@ h4{font-size:12px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted
 .ph-img.card-ph{height:170px;max-height:none;border-radius:14px;flex:none}
 .imp{margin-top:8px;padding:8px 10px;border-radius:12px;background:#fff7e6;font-size:12.5px;display:flex;flex-direction:column;gap:4px}
 .imp p.ok{color:var(--ok)}
+.imp[hidden]{display:none}
 .saved{font-size:12px;color:var(--ok);font-weight:600;margin:0 2px 6px}
 .r .em img{width:34px;height:34px;border-radius:8px;object-fit:cover;display:block}
 .steps{padding-inline-start:20px;font-size:13.5px;display:flex;flex-direction:column;gap:5px}
 .sheet a{color:inherit}
+.gtok{display:flex;gap:6px}.gtok .search{flex:1;min-width:0;font-size:14px}
+.gbtn{padding:0 14px;border-radius:12px;background:var(--ink);color:#fff;font-weight:700;font-size:13.5px}
+.gauto{font-size:12.5px;margin:0 2px 6px}.gauto label{display:flex;gap:8px;align-items:center}.gauto input{width:18px;height:18px;accent-color:var(--ok)}
+.glink{margin-top:6px;font-size:12px;color:var(--muted);text-decoration:underline;padding:4px 2px}
 @media (prefers-color-scheme: dark){/* maquette volontairement claire */}
 @media (max-height:780px){.sheet.picker{height:92%}.ph-img span{font-size:48px!important}.cats{margin:5px 0 0}.cat span{font-size:13px}.ph-img span{font-size:54px}.rest span{padding:3px 4px;font-size:13px}.tab{padding:4px 2px}.tab span{font-size:15px}.ph{margin-bottom:4px}.sb{padding:8px 12px 10px}.pick-btn{padding:7px}.car-h{margin:6px 2px 3px}.hint{margin:6px 2px 4px}}
 @media print{.scrim{display:none!important}}
@@ -263,7 +268,7 @@ const byId=Object.fromEntries(R.map(r=>[r.id,r]));
 const KEY='a-table-v1';
 const ST={plans:{},open:{},have:{},rec:[]};
 try{const o=JSON.parse(localStorage.getItem(KEY)||'{}');for(const k in ST)if(o[k])ST[k]=o[k]}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(ST));return true}catch(e){toast('⚠️ Mémoire pleine : sauvegarde impossible');return false}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(ST));if(typeof gistAuto==='function')gistAuto();return true}catch(e){toast('⚠️ Mémoire pleine : sauvegarde impossible');return false}}
 function toast(t){let e=document.getElementById('toast');if(!e){e=el('div','toast');e.id='toast';document.body.append(e)}e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),2600)}
 function upsert(r){const j=R.findIndex(x=>x.id===r.id);if(j>=0)R[j]=r;else R.push(r);byId[r.id]=r;
   const i=ST.rec.findIndex(x=>x.id===r.id);if(i>=0)ST.rec[i]=r;else ST.rec.push(r)}
@@ -481,9 +486,7 @@ async function importFiles(files){
     try{data=JSON.parse(await f.text())}catch(e){out.push(`⚠️ ${esc(f.name)} : fichier JSON illisible (${esc(e.message)})`);continue}
     if(data&&data.format==='a-table-sauvegarde'){
       if(!confirm('Restaurer cette sauvegarde ? Les plannings, courses et recettes importées actuels seront remplacés.'))continue;
-      ST.rec.forEach(r=>{if(!BUILTIN.has(r.id)){delete byId[r.id];const j=R.findIndex(x=>x.id===r.id);if(j>=0)R.splice(j,1)}});
-      for(const k of ['plans','open','have']){for(const x in ST[k])delete ST[k][x];Object.assign(ST[k],data[k]||{})}
-      ST.rec=[];(data.rec||[]).forEach(upsert);restored=true;continue}
+      applyBackup(data);restored=true;continue}
     const list=Array.isArray(data)?data:(data&&Array.isArray(data.recettes)?data.recettes:[data]);
     for(const x of list){n++;const o=toRec(x,n);if(o.err){out.push('⚠️ '+o.err);continue}
       if(imgs[o.photoFile])o.r.img=await shrink(imgs[o.photoFile]);
@@ -507,6 +510,65 @@ function recCard(id){const r=byId[id];if(!r)return;
   sheet.querySelector('.ph-img').classList.add('card-ph');
   const d=sheet.querySelector('#del');if(d)d.addEventListener('click',()=>{if(!confirm(`Supprimer « ${r.nm.replace(/&[^;]+;/g,"'")} » ?`))return;
     ST.rec=ST.rec.filter(x=>x.id!==id);if(BUILTIN.has(id)){location.reload();return}delete byId[id];const j=R.findIndex(x=>x.id===id);if(j>=0)R.splice(j,1);save();render();add()})}
+/* ===== Sauvegarde dans un Gist secret GitHub ===== */
+const GKEY='a-table-gist',GFILE='a-table-sauvegarde.json',GAPI='https://api.github.com';
+const G=Object.assign({token:'',id:'',last:'',auto:true},(()=>{try{return JSON.parse(localStorage.getItem(GKEY)||'{}')}catch(e){return {}}})());
+const gSave=()=>localStorage.setItem(GKEY,JSON.stringify(G));
+async function gh(path,opt={}){
+  const r=await fetch(GAPI+path,Object.assign({},opt,{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+G.token,'X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'}}));
+  if(r.status===401)throw new Error('jeton refusé (invalide ou expiré)');
+  if(r.status===403||r.status===404&&!path.startsWith('/gists/'))throw new Error('accès refusé : le jeton doit avoir le droit « Gists » en écriture');
+  if(r.status===404)throw Object.assign(new Error('Gist introuvable'),{nf:1});
+  if(!r.ok)throw new Error('GitHub a répondu '+r.status);
+  return r.json()}
+function backupObj(){return Object.assign({format:'a-table-sauvegarde',version:1,date:new Date().toISOString()},ST)}
+async function findGist(){for(let pg=1;pg<=5;pg++){const l=await gh(`/gists?per_page=100&page=${pg}`);const g=l.find(x=>x.files&&x.files[GFILE]);if(g)return g.id;if(l.length<100)break}return ''}
+let gBusy=false;
+async function gistPush(silent){
+  if(!G.token||gBusy)return;gBusy=true;gStatus('⏳ Enregistrement dans GitHub…');
+  try{const body={description:'À table — sauvegarde',files:{[GFILE]:{content:JSON.stringify(backupObj())}}};
+    if(!G.id)G.id=await findGist();
+    let g;try{g=G.id?await gh('/gists/'+G.id,{method:'PATCH',body:JSON.stringify(body)}):null}catch(e){if(!e.nf)throw e;G.id=''}
+    if(!g)g=await gh('/gists',{method:'POST',body:JSON.stringify(Object.assign(body,{public:false}))});
+    G.id=g.id;G.last=new Date().toISOString();gSave();gStatus();if(!silent)toast('☁️ Enregistré dans GitHub')}
+  catch(e){gStatus('⚠️ '+e.message);toast('⚠️ GitHub : '+e.message)}
+  finally{gBusy=false}}
+let gT=null;function gistAuto(){if(!G.token||!G.auto)return;clearTimeout(gT);gT=setTimeout(()=>gistPush(true),4000)}
+async function gistPull(){
+  if(!G.token)return;gStatus('⏳ Récupération depuis GitHub…');
+  try{if(!G.id)G.id=await findGist();if(!G.id){gStatus('Aucune sauvegarde trouvée dans vos Gists.');return}
+    const g=await gh('/gists/'+G.id),f=g.files&&g.files[GFILE];if(!f)throw new Error('fichier de sauvegarde absent du Gist');
+    const txt=f.truncated?await (await fetch(f.raw_url)).text():f.content;
+    const data=JSON.parse(txt);if(data.format!=='a-table-sauvegarde')throw new Error('fichier non reconnu');
+    if(!confirm(`Remplacer les données de cet appareil par la sauvegarde GitHub du ${new Date(data.date).toLocaleString('fr-FR')} ?`)){gStatus();return}
+    applyBackup(data);const a=G.auto;G.auto=false;save();G.auto=a;G.last=data.date;gSave();render();add();toast('☁️ Données récupérées depuis GitHub')}
+  catch(e){gStatus('⚠️ '+e.message)}}
+function applyBackup(data){
+  ST.rec.forEach(r=>{if(!BUILTIN.has(r.id)){delete byId[r.id];const j=R.findIndex(x=>x.id===r.id);if(j>=0)R.splice(j,1)}});
+  for(const k of ['plans','open','have']){for(const x in ST[k])delete ST[k][x];Object.assign(ST[k],data[k]||{})}
+  ST.rec=[];(data.rec||[]).forEach(upsert)}
+function gStatus(msg){const e=document.getElementById('gst');if(!e)return;
+  e.textContent=msg||(G.last?`✓ Dernier enregistrement : ${new Date(G.last).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'})}`:'Pas encore enregistré dans GitHub.')}
+function gistBlock(){
+  if(!G.token)return `<h4 style="margin-top:14px">☁️ Sauvegarde GitHub (Gist secret)</h4>
+   <p class="hint">Collez un jeton GitHub ayant uniquement le droit <b>Gists : lecture et écriture</b>. Il reste sur cet appareil et n'est jamais mis dans les sauvegardes.</p>
+   <div class="gtok"><input class="search" id="gtok" type="password" autocomplete="off" placeholder="github_pat_… ou ghp_…"><button class="gbtn" id="gcon">Connecter</button></div>`;
+  return `<h4 style="margin-top:14px">☁️ Sauvegarde GitHub (Gist secret)</h4>
+   <p class="saved" id="gst"></p>
+   <div class="gauto"><label><input type="checkbox" id="gaut"${G.auto?' checked':''}> Enregistrer automatiquement après chaque modification</label></div>
+   <div class="rlist">
+    <button class="r" id="gpush"><span class="em">☁️</span><span class="rb"><span class="nm">Enregistrer dans GitHub</span><span class="mt">Envoie plannings, courses et recettes</span></span></button>
+    <button class="r" id="gpull"><span class="em">🔄</span><span class="rb"><span class="nm">Récupérer depuis GitHub</span><span class="mt">Nouveau téléphone : remplace les données de cet appareil</span></span></button>
+   </div><button class="glink" id="goff">Déconnecter (oublier le jeton)</button>`}
+function gistWire(){
+  const c=sheet.querySelector('#gcon');if(c)c.addEventListener('click',async()=>{const t=sheet.querySelector('#gtok').value.trim();if(!t)return;
+    G.token=t;c.textContent='…';try{await gh('/gists?per_page=1');G.id=await findGist();gSave();add();toast(G.id?'✅ Connecté · sauvegarde existante trouvée':'✅ Connecté à GitHub');if(!G.id)gistPush()}
+    catch(e){G.token='';c.textContent='Connecter';toast('⚠️ '+e.message)}});
+  const p=sheet.querySelector('#gpush');if(p)p.addEventListener('click',()=>gistPush());
+  const l=sheet.querySelector('#gpull');if(l)l.addEventListener('click',gistPull);
+  const a=sheet.querySelector('#gaut');if(a)a.addEventListener('change',()=>{G.auto=a.checked;gSave()});
+  const o=sheet.querySelector('#goff');if(o)o.addEventListener('click',()=>{if(!confirm('Oublier le jeton GitHub sur cet appareil ? (la sauvegarde reste dans GitHub)'))return;G.token='';G.id='';gSave();add()});
+  gStatus()}
 function add(){
   const mine=ST.rec;
   open(`<h3>➕ Ajouter des recettes</h3><p class="sub">Importez un fichier .json au format « À table » avec, si vous le souhaitez, les photos dont le nom figure dans le champ « photo ».</p>
@@ -522,6 +584,7 @@ function add(){
     <button class="r" id="bExp"><span class="em">📤</span><span class="rb"><span class="nm">Exporter une sauvegarde</span><span class="mt">Fichier .json à garder (changement de téléphone, sécurité)</span></span></button>
     <button class="r" id="bRes"><span class="em">📥</span><span class="rb"><span class="nm">Restaurer une sauvegarde</span><span class="mt">Remplace les données de cet appareil</span></span></button>
    </div>
+   ${gistBlock()}
    <h4 style="margin-top:14px">📚 Mes recettes importées (${mine.length})</h4>`+
    (mine.length?`<div class="rlist">${mine.map(r=>`<button class="r" data-rec="${r.id}"><span class="em">${r.img?`<img src="${r.img}" alt="">`:r.em}</span><span class="rb"><span class="nm">${r.nm}</span><span class="mt">${meta(r)}</span></span></button>`).join('')}</div>`
     :'<p class="hint">Aucune pour l\'instant.</p>'));
@@ -532,6 +595,7 @@ function add(){
   sheet.querySelector('#bMod').addEventListener('click',()=>download('recettes-modele.json',MODELE));
   sheet.querySelector('#bExp').addEventListener('click',()=>{const d=new Date();download(`a-table-sauvegarde-${d.toISOString().slice(0,10)}.json`,Object.assign({format:'a-table-sauvegarde',version:1,date:d.toISOString()},ST));toast('📤 Sauvegarde exportée')});
   sheet.querySelectorAll('[data-rec]').forEach(b=>b.addEventListener('click',()=>recCard(b.dataset.rec)));
+  gistWire();
 }
 document.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>({add,shop,need})[b.dataset.open]()));
 document.getElementById('prev').addEventListener('click',()=>{weekOffset--;render()});
